@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chengzhigao.mapper.IStudentMapper">
+	<!-- 分页+查询 -->
+	<sql id="stuQuery">
+		<where>
+			<if test="name != null and name != ''">
+				and i.name like CONCAT('%',#{name},'%')
+			</if>
+		</where>
+	</sql>
+	
+	<select id="selectAllStudent" resultType="map">
+		select i.id,i.name,i.age,i.todate,g.`name` gname from info i left join grade g on i.gid = g.id
+		<include refid="stuQuery" />
+		order by i.id asc
+		limit #{page},#{count}
+	</select>
+	
+	<select id="selectStudentCount" resultType="int">
+		select count(*) from info
+	</select>
+	
+	<select id="editStudent" resultType="map">
+		select i.id,i.name,i.age,i.todate,g.`name` gname,i.gid from info i join grade g on i.gid = g.id where i.id =#{id}
+	</select>
+	
+	<select id="stuArr" resultType="map">
+		select * from grade
+	</select>
+	
+	<update id="SaveEdit" parameterType="info">
+		update info set name=#{name},age=#{age},gid=#{gid},todate=#{todate}  where id=#{id}
+	</update>
+	
+	<insert id="SaveAdd">
+		insert into info (name,age,gid,todate) values
+		(#{name},#{age},#{gid},#{todate})
+	</insert>
+	
+	<delete id="deleteStu">
+	    delete from info where id in
+	    <foreach collection="array" item="id" open="(" separator="," close=")">
+	    	#{id}
+	    </foreach>
+	</delete>
+	
+	<select id="getAllJobLevels" resultType="info">
+ 		 select * from info;
+    </select>
+    
+    <insert id="addBatchJobLevel">
+	  INSERT INTO info (name,age,gid,todate)
+	  VALUES
+	  <foreach collection="jls" item="jl" separator=",">
+	    (#{jl.name},#{jl.age},#{jl.gid},#{jl.todate})
+	  </foreach>
+	</insert>
+</mapper>
+
+

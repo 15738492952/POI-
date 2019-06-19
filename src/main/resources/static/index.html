@@ -1,0 +1,220 @@
+<!DOCTYPE HTML >
+<html>
+
+	<head>
+
+		<title>学生界面</title>
+		<meta charset="UTF-8" />
+		<script src="/StudentSystem/js/vue.js"></script>
+		<!-- 引入样式 -->
+		<link rel="stylesheet" href="/StudentSystem/css/index.css">
+		<!-- 引入组件库 -->
+		<script src="/StudentSystem/js/index.js"></script>
+		<script src="/StudentSystem/js/axios.min.js"></script>
+		
+	</head>
+
+	<body >
+	
+	<div id="app">
+		<div>
+		    <el-button type="primary" icon="el-icon-edit" @click="addStudent">添加</el-button>
+		    <el-button type="primary" icon="el-icon-delete" @click="deleteSearch">删除</el-button>
+			<el-input v-model="StudentQuery.name" placeholder="请输入内容" style="width:200px"></el-input>
+		    <el-button type="primary" icon="el-icon-search" @click="stuSearch">搜索</el-button>
+		    <el-button @click="exportData" type="success" size="mini" icon="el-icon-download">导出数据</el-button>
+		    <el-upload
+			  style="display: inline"
+			  :show-file-list="false"
+			  :on-success="onSuccess"
+			  :on-error="onError"
+			  :before-upload="beforeUpload"
+			  action="/StudentSystem/student/import">
+			  <el-button size="mini" type="success" :disabled="!enabledUploadBtn" :icon="uploadBtnIcon">{{btnText}}</el-button>
+			</el-upload>
+
+		</div>
+		<el-table :data="tableData" style="width: 100%" @selection-change="handleSelectionChange">
+		   <el-table-column type="index"></el-table-column>
+		   <el-table-column type="selection" width="55"></el-table-column>
+	       <el-table-column prop="id" label="编号" width="180"></el-table-column>
+	       <el-table-column prop="name" label="姓名" width="180"></el-table-column>
+	       <el-table-column prop="age" label="年龄" width="180"> </el-table-column>
+	       <el-table-column prop="gname" label="班级" width="180"> </el-table-column>
+	       <el-table-column prop="todate" label="日期" width="180"> </el-table-column>
+	       <el-table-column fixed="right" label="操作" width="100">
+            <template slot-scope="scope">
+            	<el-button size="mini" @click="handleEdit(scope.row)">编辑</el-button>
+            </template>
+          </el-table-column>
+  	   </el-table>
+    	</el-table>
+    	<div class="block">
+    			<el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
+                :current-page="StudentQuery.page"
+                :page-sizes="[3, 6, 9, 12]"
+                :page-size="3"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="tableTotal">
+                </el-pagination>
+  		</div>
+  		<el-dialog
+		  title="提示"
+		  :visible.sync="dialogVisible"
+		  width="30%">
+		  
+		  <el-form ref="form" :model="studentInfo" label-width="80px">
+			   <el-input v-model="studentInfo.id" type="hidden"></el-input>
+			   
+			  <el-form-item label="姓名">
+			    <el-input v-model="studentInfo.name"></el-input>
+			  </el-form-item>
+			  <el-form-item label="年龄">
+			    <el-input v-model="studentInfo.age"></el-input>
+			  </el-form-item>
+			  <el-form-item label="班级">
+			  <!--   <el-input v-model="studentInfo.id"></el-input> -->
+			    <el-select v-model="studentInfo.gid" placeholder="请选择">
+					<el-option v-for="stu in stuArr" :key="stu.id" :label="stu.name" :value="stu.id">
+					</el-option>
+				</el-select>
+			  </el-form-item>
+			  <el-form-item label="日期">
+			     <el-date-picker value-format="yyyy-MM-dd HH:mm:ss"  v-model="studentInfo.todate" type="datetime" placeholder="选择日期">
+                </el-date-picker>
+          </el-form>
+		  
+		  <span slot="footer" class="dialog-footer">
+		    <el-button @click="dialogVisible = false">取 消</el-button>
+		    <el-button type="primary" @click="SaveEdit">确 定</el-button>
+		  </span>
+		</el-dialog>
+		
+	</div>	
+		<script type="text/javascript">
+			var app = new Vue({
+				el: "#app",
+				data: {
+					tableData:[],
+					StudentQuery: {
+						page: 1, 
+						count: 3, 
+						name: "", 						
+					},
+					tableTotal:0,
+					dialogVisible:false,
+					studentInfo:{},
+					stuArr:[],
+					multipleSelection: [],
+					btnText:'数据导入',
+					uploadBtnIcon:'el-icon-upload2',
+    				enabledUploadBtn:true
+				},
+				methods: {
+					handleSizeChange:function(val) {
+        				this.StudentQuery.count = val;
+						this.StudentQuery.page = 1;
+						reload();
+      				},
+                    handleCurrentChange:function(val) {
+        			    this.StudentQuery.page = val;
+						reload();
+                    },
+                    stuSearch:function(){
+                    	reload();
+                    },
+                    handleEdit: function(student) {
+						axios.get('/StudentSystem/student/editStudent?id=' + student.id)
+							.then(function(response) {
+								app.studentInfo = response.data;
+								app.dialogVisible = true;
+							});
+				      },
+				    SaveEdit: function(studentInfo){
+				    var url = ""; 
+				    if(this.studentInfo.id == null) {
+							url = "/StudentSystem/student/SaveAdd";
+						} else {
+							url = "/StudentSystem/student/SaveEdit";
+						}
+				    axios.post(url, app.studentInfo)
+							.then(function(response) {
+							app.dialogVisible = false;
+			     			reload();
+						});
+				  },
+				     addStudent: function(studentInfo){
+				     		app.dialogVisible = true;
+				     		this.studentInfo = {};
+				     },
+				     deleteSearch: function() {
+						if(this.multipleSelection.length > 0) {
+							this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+								confirmButtonText: '确定',
+								cancelButtonText: '取消',
+								type: 'warning'
+							}).then(function() {
+								var ids = [];
+								var s = app.multipleSelection;
+								for(var index in s) {
+									ids.push(s[index].id);
+								};
+                             axios.post('/StudentSystem/student/deleteStu', ids)
+									.then(function(response) {
+										app.studentInfo.page = 1;
+										reload();
+									});
+							})
+						} else {
+							this.$notify.info({
+								title: '温馨提示',
+								message: '删除请至少勾选一行'
+							});
+						}
+					},
+					handleSelectionChange: function(val) {
+						this.multipleSelection = val;
+					},
+					exportData: function(){
+						 window.location.href="student/export";
+					},
+					onSuccess: function(response,file,fileList){
+					    this.enabledUploadBtn=true;
+					    this.uploadBtnIcon="el-icon-upload2";
+					    this.btnText='数据导入';
+					    alert("数据导入成功！");
+					    reload();
+					  },
+					 onError: function(err,file,fileList){
+					    this.enabledUploadBtn=true;
+					    this.uploadBtnIcon="el-icon-upload2";
+					    this.btnText='数据导入';
+					    alert("数据导入失败！请检查是否有重复数据,和网络连接状况！");
+					  },
+					  beforeUpload(file){
+					    this.enabledUploadBtn=false;
+					    this.uploadBtnIcon="el-icon-loading";
+					    this.btnText='正在导入';
+					  }
+					  
+					}
+			});
+			
+			
+		   function reload() {
+				axios.post('/StudentSystem/student/selectAll', app.StudentQuery)
+					.then(function(response) {
+						app.tableData = response.data.studentData;
+						app.tableTotal = response.data.totalCount;
+					});
+			}
+			reload();
+			axios.post('/StudentSystem/student/stuArr')
+				.then(function(response) {
+					app.stuArr = response.data;
+				});
+		</script>
+
+	</body>
+
+</html>
